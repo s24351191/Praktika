@@ -7,3 +7,60 @@ requires-python = ">=3.13"
 dependencies = [
     "httpx>=0.28.1",
 ]
+
+[dependency-groups]
+dev = [
+    "mypy>=2.1.0",
+    "ruff>=0.15.15",
+]
+
+
+[tool.ruff]
+include = ["**/*.py"]
+exclude = ["servicedesk/database/migrations/**/*.py"]
+line-length = 80
+target-version = "py312"
+
+[tool.ruff.analyze]
+preview = true
+
+[tool.ruff.lint]
+select = ["ALL"]
+ignore = [
+    "RUF001",
+    "RUF002",
+    "RUF003",
+    "RUF012",
+    "B008",
+    "COM812", # ruff formatter warn on it
+    "TRY400",
+    "TRY003",
+    "UP037",
+    "PLR",
+    "D1",
+    "D203",
+    "D213",
+    "CPY",
+    "EM",
+    "ARG",
+    "FIX",
+    "TD003",
+    "FBT",
+    "DOC201",
+]
+preview = true
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.format]
+quote-style = 'single'
+indent-style = 'space'
+
+
+[tool.mypy]
+packages = ['weather_bot']
+strict = true
+strict_bytes = true
+local_partial_types = true
+warn_unreachable = true
