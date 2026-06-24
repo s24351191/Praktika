@@ -51,7 +51,11 @@ if __name__ == "__main__":
     print(f"Запрос погоды для {lat}, {lon}")
 
     try:
-        w = get_weather(lat, lon)
-        print(f"Температура: {w.temp}, Влажность: {w.hum}, Давление: {w.press}")
+        weth = get_weather(lat, lon)
+        print(
+            f"Температура: {weth.temp}, "
+            f"Влажность: {weth.hum}, "
+            f"Давление: {weth.press}"
+        )
     except WeatherError as err:
         print(f"Что-то пошло не так: {err}")
