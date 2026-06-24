@@ -1,42 +1,57 @@
 import httpx
+from dataclasses import dataclass
+
+from exception import WeatherError, WeatherNetErr, WeatherParseErr
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
 
 
-def get_weather(latitude: float, longitude: float):
+@dataclass
+class WeatherData:
+    temp: float
+    hum: int
+    press: int
+
+
+def get_weather(lat: float, lon: float) -> WeatherData:
     params = {
-        "latitude": latitude,
-        "longitude": longitude,
+        "latitude": lat,
+        "longitude": lon,
         "current": "temperature_2m,relative_humidity_2m,pressure_msl",
-        "timezone": "Europe/Moscow",
+        "timezone": "America/New_York",
     }
 
     try:
-        response = httpx.get(API_URL, params=params)
-        response.raise_for_status()
-        weather_data = response.json()
-        current_weather = weather_data.get("current", {})
-        temperature = current_weather.get("temperature_2m")
-        humidity = current_weather.get("relative_humidity_2m")
-        pressure = current_weather.get("pressure_msl")
-        return temperature, humidity, pressure
-    except httpx.RequestError as e:
-        print(f"Ошибка при запросе к API: {e}")
-        return None, None, None
-    except Exception as e:
-        print(f"Произошла непредвиденная ошибка: {e}")
-        return None, None, None
+        resp = httpx.get(API_URL, params=params, timeout=30)
+    except httpx.RequestError as err:
+        raise WeatherNetErr(f"Ошибка сети: {err}") from err
+
+    if resp.status_code != 200:
+        raise WeatherNetErr(f"Неверный статус: {resp.status_code}")
+
+    try:
+        data = resp.json()
+    except ValueError as err:
+        raise WeatherParseErr(f"Не могу разобрать JSON: {err}") from err
+
+    try:
+        cur = data["current"]
+        temp = cur["temperature_2m"]
+        hum = cur["relative_humidity_2m"]
+        press = cur["pressure_msl"]
+    except KeyError as err:
+        raise WeatherParseErr(f"Нет ключа в ответе: {err}") from err
+
+    return WeatherData(temp=temp, hum=hum, press=press)
 
 
 if __name__ == "__main__":
-    lat = 55.7558
-    lon = 37.6173
-    print(f"Запрашиваем погоду для координат: широта {lat}, долгота {lon}")
-    temp, hum, press = get_weather(lat, lon)
-    if temp is not None:
-        print("\n--- Результат ---")
-        print(f"Температура: {temp}°C")
-        print(f"Относительная влажность: {hum}%")
-        print(f"Давление: {press} гПа")
-    else:
-        print("\nНе удалось получить данные о погоде.")
+    lat = 40.7128
+    lon = -74.0060
+    print(f"Запрос погоды для {lat}, {lon}")
+
+    try:
+        w = get_weather(lat, lon)
+        print(f"Температура: {w.temp}, Влажность: {w.hum}, Давление: {w.press}")
+    except WeatherError as err:
+        print(f"Что-то пошло не так: {err}")
