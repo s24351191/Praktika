@@ -1,61 +1,71 @@
 import httpx
 from dataclasses import dataclass
-
-from exception import WeatherError, WeatherNetErr, WeatherParseErr
+from exception import WeatherRequestError, WeatherRequestErrorKind
 
 API_URL = "https://api.open-meteo.com/v1/forecast"
 
 
 @dataclass
 class WeatherData:
-    temp: float
-    hum: int
-    press: int
+    temperature: float
+    humidity: int
+    pressure: int
 
 
-def get_weather(lat: float, lon: float) -> WeatherData:
-    params = {
-        "latitude": lat,
-        "longitude": lon,
+def get_weather(latitude: float, longitude: float) -> WeatherData:
+    params: dict[str, float | str] = {
+        "latitude": latitude,
+        "longitude": longitude,
         "current": "temperature_2m,relative_humidity_2m,pressure_msl",
-        "timezone": "America/New_York",
+        "timezone": "Europe/Moscow",
     }
 
     try:
         resp = httpx.get(API_URL, params=params, timeout=30)
     except httpx.RequestError as err:
-        raise WeatherNetErr(f"Ошибка сети: {err}") from err
+        raise WeatherRequestError(
+            f"Ошибка сети: {err}", WeatherRequestErrorKind.NET
+        ) from err
 
     if resp.status_code != 200:
-        raise WeatherNetErr(f"Неверный статус: {resp.status_code}")
+        raise WeatherRequestError(
+            f"Неверный статус: {resp.status_code}", WeatherRequestErrorKind.NET
+        )
 
     try:
         data = resp.json()
     except ValueError as err:
-        raise WeatherParseErr(f"Не могу разобрать JSON: {err}") from err
+        raise WeatherRequestError(
+            f"Не могу разобрать JSON: {err}", WeatherRequestErrorKind.PARSE
+        ) from err
 
     try:
-        cur = data["current"]
-        temp = cur["temperature_2m"]
-        hum = cur["relative_humidity_2m"]
-        press = cur["pressure_msl"]
+        current = data["current"]
+        temperature = current["temperature_2m"]
+        humidity = current["relative_humidity_2m"]
+        pressure = current["pressure_msl"]
     except KeyError as err:
-        raise WeatherParseErr(f"Нет ключа в ответе: {err}") from err
+        raise WeatherRequestError(
+            f"Нет ключа в ответе: {err}", WeatherRequestErrorKind.PARSE
+        ) from err
 
-    return WeatherData(temp=temp, hum=hum, press=press)
+    return WeatherData(
+        temperature=temperature, humidity=humidity, pressure=pressure
+    )
 
 
 if __name__ == "__main__":
-    lat = 40.7128
-    lon = -74.0060
-    print(f"Запрос погоды для {lat}, {lon}")
+    latitude = 55.7558
+    longitude = 37.6173
+
+    print(f"Запрос погоды для {latitude}, {longitude}")
 
     try:
-        weth = get_weather(lat, lon)
+        weth = get_weather(latitude, longitude)
         print(
-            f"Температура: {weth.temp}, "
-            f"Влажность: {weth.hum}, "
-            f"Давление: {weth.press}"
+            f"Температура: {weth.temperature}, "
+            f"Влажность: {weth.humidity}, "
+            f"Давление: {weth.pressure}"
         )
-    except WeatherError as err:
+    except WeatherRequestError as err:
         print(f"Что-то пошло не так: {err}")

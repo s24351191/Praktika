@@ -1,16 +1,19 @@
-class WeatherError(Exception):
-    """Ошибки с погодой."""
-
-    pass
+from enum import StrEnum, auto
 
 
-class WeatherNetErr(WeatherError):
-    """Ошибка сети."""
+class WeatherRequestErrorKind(StrEnum):
+    """Тип ошибки которая произошла при запросе погоды."""
 
-    pass
+    NET = auto()
+    """Сетевая ошибка."""
+    PARSE = auto()
+    """Ошибка парсинга данных."""
 
 
-class WeatherParseErr(WeatherError):
-    """Ошибка парсинг."""
+class WeatherRequestError(Exception):
+    """Ошибка запроса погоды."""
 
-    pass
+    def __init__(self, description: str, kind: WeatherRequestErrorKind) -> None:
+        self.description = description
+        self.kind = kind
+        super().__init__(f"{kind.name}: {description}")
